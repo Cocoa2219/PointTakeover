@@ -197,7 +197,7 @@ public class EventHandlers
             player.Broadcast(10, "<size=35><b>MTF-E11-SR 부착물을 설정해 주세요.</b></size>");
         }
 
-        yield return Timing.WaitForSeconds(10f);
+        yield return Timing.WaitForSeconds(30f);
 
         Pickup.List.ToList().ForEach(x => x.Destroy());
 
@@ -245,7 +245,7 @@ public class EventHandlers
         {
             player.AddItem(ItemType.GunE11SR);
             player.AddItem(ItemType.Medkit);
-            player.AddItem(ItemType.Adrenaline);
+            // player.AddItem(ItemType.Adrenaline);
             player.AddItem(ItemType.ArmorCombat);
             player.AddItem(ItemType.Radio);
             player.AddAmmo(AmmoType.Nato556, 5000);
@@ -279,56 +279,56 @@ public class EventHandlers
                 {
                     if (aStealPercentage > 0)
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 쟁탈 중! ({Mathf.FloorToInt(aStealPercentage * 100)}%)", dBoyColor, ntfColor)}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 A : 쟁탈 중! ({Mathf.FloorToInt(aStealPercentage * 100)}%)", dBoyColor, ntfColor)}</b></size>";
                     }
                     else
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 쟁탈 중! ({Mathf.FloorToInt(-aStealPercentage * 100)}%)", ntfColor, dBoyColor)}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 A : 쟁탈 중! ({Mathf.FloorToInt(-aStealPercentage * 100)}%)", ntfColor, dBoyColor)}</b></size>";
                     }
                 }
                 else if (aPercentage != 0)
                 {
                     if (aPercentage > 0)
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 점령 중! ({Mathf.FloorToInt(aPercentage * 100)}%)", new Color32(239,121,4, 255), new Color32(85,38,0,255))}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 A : 점령 중! ({Mathf.FloorToInt(aPercentage * 100)}%)", new Color32(239,121,4, 255), new Color32(85,38,0,255))}</b></size>";
                     }
                     else
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 점령 중! ({Mathf.FloorToInt(-aPercentage * 100)}%)", new Color32(7,143,243,255), new Color32(0,46,85,255))}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 A : 점령 중! ({Mathf.FloorToInt(-aPercentage * 100)}%)", new Color32(7,143,243,255), new Color32(0,46,85,255))}</b></size>";
                     }
                 }
                 else
                 {
-                    text += "<size=40><b>포인트 A : 0%</b></size>";
+                    text += "<size=30><b>포인트 A : 0%</b></size>";
                 }
 
-                text += " ";
+                text += "\n";
 
                 if (bStealPercentage != 0)
                 {
                     if (bStealPercentage > 0)
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 쟁탈 중! ({Mathf.FloorToInt(bStealPercentage * 100)}%)", dBoyColor, ntfColor)}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 B : 쟁탈 중! ({Mathf.FloorToInt(bStealPercentage * 100)}%)", dBoyColor, ntfColor)}</b></size>";
                     }
                     else
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 쟁탈 중! ({Mathf.FloorToInt(-bStealPercentage * 100)}%)", ntfColor, dBoyColor)}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 B : 쟁탈 중! ({Mathf.FloorToInt(-bStealPercentage * 100)}%)", ntfColor, dBoyColor)}</b></size>";
                     }
                 }
                 else if (bPercentage != 0)
                 {
                     if (bPercentage > 0)
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 점령 중! ({Mathf.FloorToInt(bPercentage * 100)}%)", new Color32(239,121,4, 255), new Color32(85,38,0,255))}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 B : 점령 중! ({Mathf.FloorToInt(bPercentage * 100)}%)", new Color32(239,121,4, 255), new Color32(85,38,0,255))}</b></size>";
                     }
                     else
                     {
-                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 점령 중! ({Mathf.FloorToInt(-bPercentage * 100)}%)", new Color32(7,143,243,255), new Color32(0,46,85,255))}</b></size>";
+                        text += $"<size=30><b>{MakeGradientText($"포인트 B : 점령 중! ({Mathf.FloorToInt(-bPercentage * 100)}%)", new Color32(7,143,243,255), new Color32(0,46,85,255))}</b></size>";
                     }
                 }
                 else
                 {
-                    text += "<size=40><b>포인트 B : 0%</b></size>";
+                    text += "<size=30><b>포인트 B : 0%</b></size>";
                 }
 
                 Map.Broadcast(2, text, Broadcast.BroadcastFlags.Normal, true);
@@ -368,7 +368,7 @@ public class EventHandlers
     {
         while (!Round.IsEnded && !_roundEnded)
         {
-            foreach (var player in Player.List)
+            foreach (var player in Player.List.Where(x => x.IsAlive))
             {
                 var distanceToA = Vector3.Distance(player.Position, _takeoverPointAPos);
                 var distanceToB = Vector3.Distance(player.Position, _takeoverPointBPos);
@@ -513,7 +513,6 @@ public class EventHandlers
                     else
                     {
                         Log.Debug("포인트 A에서 대치 중...");
-                        _pointAOccupyTime = 0;
 
                         foreach (var player in _pointAPlayers["A"])
                         {
@@ -525,7 +524,6 @@ public class EventHandlers
                             player.ShowHint("<b>대치 중!</b>", 2f);
                         }
 
-                        _takeoverPointA.Color = defaultColor;
                     }
                 }
                 else if (_pointAPlayers["B"].Count > 0)
@@ -574,7 +572,7 @@ public class EventHandlers
                     else
                     {
                         Log.Debug("포인트 A에서 대치 중...");
-                        _pointAOccupyTime = 0;
+
                         foreach (var player in _pointAPlayers["A"])
                         {
                             player.ShowHint("<b>대치 중!</b>", 2f);
@@ -585,7 +583,6 @@ public class EventHandlers
                             player.ShowHint("<b>대치 중!</b>", 2f);
                         }
 
-                        _takeoverPointA.Color = defaultColor;
                     }
                 }
                 else
@@ -635,7 +632,6 @@ public class EventHandlers
                         }
                         else
                         {
-                            _pointAStealTime = 0;
                             foreach (var player in _pointAPlayers["A"])
                             {
                                 player.ShowHint("<b>대치 중!</b>", 2f);
@@ -646,7 +642,6 @@ public class EventHandlers
                                 player.ShowHint("<b>대치 중!</b>", 2f);
                             }
 
-                            _takeoverPointA.Color = ntfColor;
                         }
                     else
                     {
@@ -694,7 +689,6 @@ public class EventHandlers
                         }
                         else
                         {
-                            _pointAStealTime = 0;
                             foreach (var player in _pointAPlayers["A"])
                             {
                                 player.ShowHint("<b>대치 중!</b>", 2f);
@@ -705,7 +699,6 @@ public class EventHandlers
                                 player.ShowHint("<b>대치 중!</b>", 2f);
                             }
 
-                            _takeoverPointA.Color = dBoyColor;
                         }
                     else
                     {
@@ -764,7 +757,6 @@ public class EventHandlers
                     else
                     {
                         Log.Debug("포인트 B에서 대치 중...");
-                        _pointBOccupyTime = 0;
                         foreach (var player in _pointBPlayers["A"])
                         {
                             player.ShowHint("<b>대치 중!</b>", 2f);
@@ -775,7 +767,6 @@ public class EventHandlers
                             player.ShowHint("<b>대치 중!</b>", 2f);
                         }
 
-                        _takeoverPointB.Color = defaultColor;
                     }
                 }
                 else if (_pointBPlayers["B"].Count > 0)
@@ -824,7 +815,6 @@ public class EventHandlers
                     else
                     {
                         Log.Debug("포인트 B에서 대치 중...");
-                        _pointBOccupyTime = 0;
                         foreach (var player in _pointBPlayers["A"])
                         {
                             player.ShowHint("<b>대치 중!</b>", 2f);
@@ -835,7 +825,6 @@ public class EventHandlers
                             player.ShowHint("<b>대치 중!</b>", 2f);
                         }
 
-                        _takeoverPointB.Color = defaultColor;
                     }
                 }
                 else
@@ -885,7 +874,6 @@ public class EventHandlers
                         }
                         else
                         {
-                            _pointBStealTime = 0;
                             foreach (var player in _pointBPlayers["A"])
                             {
                                 player.ShowHint("<b>대치 중!</b>", 2f);
@@ -896,7 +884,6 @@ public class EventHandlers
                                 player.ShowHint("<b>대치 중!</b>", 2f);
                             }
 
-                            _takeoverPointB.Color = ntfColor;
                         }
                     else
                     {
@@ -943,7 +930,6 @@ public class EventHandlers
                         }
                         else
                         {
-                            _pointBStealTime = 0;
                             foreach (var player in _pointBPlayers["A"])
                             {
                                 player.ShowHint("<b>대치 중!</b>", 2f);
@@ -954,7 +940,6 @@ public class EventHandlers
                                 player.ShowHint("<b>대치 중!</b>", 2f);
                             }
 
-                            _takeoverPointB.Color = dBoyColor;
                         }
                     else
                     {
@@ -989,11 +974,13 @@ public class EventHandlers
         while (timeLeft > 0)
         {
             timeLeft--;
-            player.Broadcast(2, $"<b><size=35>{timeLeft}뒤 리스폰됩니다.</size></b>", Broadcast.BroadcastFlags.Normal, true);
+            // player.Broadcast(2, $"<b><size=35>{timeLeft}뒤 리스폰됩니다.</size></b>", Broadcast.BroadcastFlags.Normal, true);
             yield return Timing.WaitForSeconds(1f);
         }
 
-        player.Broadcast(3, "<size=35><b>리스폰되었습니다.</b></size>", Broadcast.BroadcastFlags.Normal, true);
+        // player.Broadcast(3, "<size=35><b>리스폰되었습니다.</b></size>", Broadcast.BroadcastFlags.Normal, true);
+
+        if (_roundEnded) yield break;
 
         var spawnableRooms = Room.List.Where(x =>
             _playerSpawnRooms[PointTakeOver.Instance.Config.ZoneType].Contains(x.Type) && x != _takeoverPointA &&
@@ -1013,7 +1000,7 @@ public class EventHandlers
 
         player.AddItem(ItemType.GunE11SR);
         player.AddItem(ItemType.Medkit);
-        player.AddItem(ItemType.Adrenaline);
+        // player.AddItem(ItemType.Adrenaline);
         player.AddItem(ItemType.ArmorCombat);
         player.AddItem(ItemType.Radio);
         player.AddAmmo(AmmoType.Nato556, 5000);
@@ -1026,6 +1013,9 @@ public class EventHandlers
     public void OnDied(DiedEventArgs ev)
     {
         Pickup.List.Where(x => x.PreviousOwner == ev.Player).ToList().ForEach(pickup => pickup.Destroy());
+        if (!ev.Attacker.HasItem(ItemType.Medkit))
+            ev.Attacker.AddItem(ItemType.Medkit);
+        ev.Attacker.AddAhp(20, 75, 0, 1, 0, false);
         Timing.RunCoroutine(Respawn(ev.Player, 3));
     }
 

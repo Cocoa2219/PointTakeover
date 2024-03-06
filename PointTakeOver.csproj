@@ -23,7 +23,7 @@
         <DefineConstants>DEBUG;TRACE</DefineConstants>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
-        <PostBuildEvent>xcopy /y "C:\Users\user\Documents\PointTakeOver\bin\Debug\PointTakeOver.dll" "C:\Users\user\AppData\Roaming\EXILED\Plugins\"</PostBuildEvent>
+        <PostBuildEvent>xcopy /y "C:\Users\PC\Documents\PointTakeOver\bin\Debug\PointTakeOver.dll" "C:\Users\PC\AppData\Roaming\EXILED\Plugins\"</PostBuildEvent>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
         <PlatformTarget>AnyCPU</PlatformTarget>
