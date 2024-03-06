@@ -10,6 +10,7 @@ using MEC;
 using PlayerRoles;
 using UnityEngine;
 using Utils.NonAllocLINQ;
+// ReSharper disable All
 
 namespace PointTakeOver;
 
@@ -17,18 +18,46 @@ public class EventHandlers
 {
     private readonly Dictionary<ZoneType, RoomType[]> _takeoverPointSpawns = new()
     {
-        {ZoneType.LightContainment, [RoomType.LczCrossing, RoomType.LczCurve, RoomType.LczStraight, RoomType.LczTCross, RoomType.LczPlants, RoomType.LczToilets]},
-        {ZoneType.HeavyContainment, [RoomType.HczCrossing, RoomType.HczArmory, RoomType.HczCurve, RoomType.HczHid, RoomType.HczStraight, RoomType.HczTCross] }
-    };
-    private readonly Dictionary<ZoneType, RoomType[]> _playerSpawnRooms = new()
-    {
-        { ZoneType.LightContainment, [RoomType.LczAirlock, RoomType.LczCafe, RoomType.LczCrossing, RoomType.LczCurve, RoomType.LczPlants, RoomType.LczStraight, RoomType.LczToilets, RoomType.LczTCross]},
-        { ZoneType.HeavyContainment, [RoomType.HczCrossing, RoomType.HczCurve, RoomType.HczHid, RoomType.HczStraight, RoomType.HczTCross ]},
-        { ZoneType.Entrance, [RoomType.EzConference, RoomType.EzCafeteria, RoomType.EzCurve, RoomType.EzStraight, RoomType.EzTCross, RoomType.EzCrossing]}
+        {
+            ZoneType.LightContainment,
+            [
+                RoomType.LczCrossing, RoomType.LczCurve, RoomType.LczStraight, RoomType.LczTCross, RoomType.LczPlants,
+                RoomType.LczToilets
+            ]
+        },
+        {
+            ZoneType.HeavyContainment,
+            [
+                RoomType.HczCrossing, RoomType.HczArmory, RoomType.HczCurve, RoomType.HczHid, RoomType.HczStraight,
+                RoomType.HczTCross
+            ]
+        }
     };
 
-    private readonly Dictionary<string, HashSet<Player>> _pointAPlayers = new() {["A"] = [], ["B"] = []};
-    private readonly Dictionary<string, HashSet<Player>> _pointBPlayers = new() {["A"] = [], ["B"] = []};
+    private readonly Dictionary<ZoneType, RoomType[]> _playerSpawnRooms = new()
+    {
+        {
+            ZoneType.LightContainment,
+            [
+                RoomType.LczAirlock, RoomType.LczCafe, RoomType.LczCrossing, RoomType.LczCurve, RoomType.LczPlants,
+                RoomType.LczStraight, RoomType.LczToilets, RoomType.LczTCross
+            ]
+        },
+        {
+            ZoneType.HeavyContainment,
+            [RoomType.HczCrossing, RoomType.HczCurve, RoomType.HczHid, RoomType.HczStraight, RoomType.HczTCross]
+        },
+        {
+            ZoneType.Entrance,
+            [
+                RoomType.EzConference, RoomType.EzCafeteria, RoomType.EzCurve, RoomType.EzStraight, RoomType.EzTCross,
+                RoomType.EzCrossing
+            ]
+        }
+    };
+
+    private readonly Dictionary<string, HashSet<Player>> _pointAPlayers = new() { ["A"] = [], ["B"] = [] };
+    private readonly Dictionary<string, HashSet<Player>> _pointBPlayers = new() { ["A"] = [], ["B"] = [] };
 
     private HashSet<Player> _teamA = [];
     private HashSet<Player> _teamB = [];
@@ -40,12 +69,21 @@ public class EventHandlers
     private Vector3 _takeoverPointAPos;
     private Vector3 _takeoverPointBPos;
     private int _gameTime;
+    private int _curGameTime;
     private int _pointAOccupyTime;
     private int _pointBOccupyTime;
     private int _pointAStealTime;
     private int _pointBStealTime;
+    private bool _broadcastInfo = true;
+    private bool _roundEnded = false;
 
     private readonly List<CoroutineHandle> _coroutines = new();
+
+    private Color32 dBoyColor = new Color32(239,121,4, 25);
+
+    private Color32 defaultColor = new Color32(132, 191, 133, 25);
+
+    private Color32 ntfColor = new Color32(7,143,243,25);
 
     private Color MixColors(Color color1, Color color2, float ratio)
     {
@@ -67,7 +105,7 @@ public class EventHandlers
         var gradientText = "";
         for (var i = 0; i < text.Length; i++)
         {
-            var ratio = i / (float) text.Length;
+            var ratio = i / (float)text.Length;
             var color = MixColors(colorA, colorB, ratio);
             gradientText += $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{text[i]}</color>";
         }
@@ -140,6 +178,14 @@ public class EventHandlers
         _coroutines.Add(Timing.RunCoroutine(StartGame()));
     }
 
+    private string SecondsToMmss(int seconds)
+    {
+        var minutes = seconds / 60;
+        var remainingSeconds = seconds % 60;
+
+        return $"{minutes:D2} : {remainingSeconds:D2}";
+    }
+
     private IEnumerator<float> StartGame()
     {
         yield return Timing.WaitForSeconds(0.1f);
@@ -201,14 +247,126 @@ public class EventHandlers
             player.AddItem(ItemType.Medkit);
             player.AddItem(ItemType.Adrenaline);
             player.AddItem(ItemType.ArmorCombat);
+            player.AddItem(ItemType.Radio);
+            player.AddAmmo(AmmoType.Nato556, 5000);
         }
-
         _coroutines.Add(Timing.RunCoroutine(PointTimer()));
+        _coroutines.Add(Timing.RunCoroutine(RoundTimer()));
+        Player.List.ToList().ForEach(x => x.IsGodModeEnabled = true);
+        yield return Timing.WaitForSeconds(2f);
+        Player.List.ToList().ForEach(x => x.IsGodModeEnabled = false);
+    }
+
+    private IEnumerator<float> RoundTimer()
+    {
+        float bPercentage;
+        float bStealPercentage;
+        while (!Round.IsEnded && !_roundEnded)
+        {
+            _gameTime = PointTakeOver.Instance.Config.GameTime;
+            yield return Timing.WaitForSeconds(1f);
+            _curGameTime++;
+            if (_broadcastInfo)
+            {
+                var text = string.Empty;
+                text += $"<size=60><b>{SecondsToMmss(_gameTime - _curGameTime)}</b></size>\n";
+                var aPercentage = _pointAOccupyTime / (float) PointTakeOver.Instance.Config.OccupyTime;
+                bPercentage = _pointBOccupyTime / (float) PointTakeOver.Instance.Config.OccupyTime;
+                var aStealPercentage = _pointAStealTime / (float) PointTakeOver.Instance.Config.OccupyStealTime;
+                bStealPercentage = _pointBStealTime / (float) PointTakeOver.Instance.Config.OccupyStealTime;
+
+                if (aStealPercentage != 0)
+                {
+                    if (aStealPercentage > 0)
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 쟁탈 중! ({Mathf.FloorToInt(aStealPercentage * 100)}%)", dBoyColor, ntfColor)}</b></size>";
+                    }
+                    else
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 쟁탈 중! ({Mathf.FloorToInt(-aStealPercentage * 100)}%)", ntfColor, dBoyColor)}</b></size>";
+                    }
+                }
+                else if (aPercentage != 0)
+                {
+                    if (aPercentage > 0)
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 점령 중! ({Mathf.FloorToInt(aPercentage * 100)}%)", new Color32(239,121,4, 255), new Color32(85,38,0,255))}</b></size>";
+                    }
+                    else
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 A : 점령 중! ({Mathf.FloorToInt(-aPercentage * 100)}%)", new Color32(7,143,243,255), new Color32(0,46,85,255))}</b></size>";
+                    }
+                }
+                else
+                {
+                    text += "<size=40><b>포인트 A : 0%</b></size>";
+                }
+
+                text += " ";
+
+                if (bStealPercentage != 0)
+                {
+                    if (bStealPercentage > 0)
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 쟁탈 중! ({Mathf.FloorToInt(bStealPercentage * 100)}%)", dBoyColor, ntfColor)}</b></size>";
+                    }
+                    else
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 쟁탈 중! ({Mathf.FloorToInt(-bStealPercentage * 100)}%)", ntfColor, dBoyColor)}</b></size>";
+                    }
+                }
+                else if (bPercentage != 0)
+                {
+                    if (bPercentage > 0)
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 점령 중! ({Mathf.FloorToInt(bPercentage * 100)}%)", new Color32(239,121,4, 255), new Color32(85,38,0,255))}</b></size>";
+                    }
+                    else
+                    {
+                        text += $"<size=40><b>{MakeGradientText($"포인트 B : 점령 중! ({Mathf.FloorToInt(-bPercentage * 100)}%)", new Color32(7,143,243,255), new Color32(0,46,85,255))}</b></size>";
+                    }
+                }
+                else
+                {
+                    text += "<size=40><b>포인트 B : 0%</b></size>";
+                }
+
+                Map.Broadcast(2, text, Broadcast.BroadcastFlags.Normal, true);
+            }
+
+            if (_curGameTime >= _gameTime)
+            {
+                if (_pointAOccupyTime == 0 && _pointBOccupyTime == 0)
+                {
+                    _roundEnded = true;
+                    Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                    Map.Broadcast(5, $"<size=35><b>{MakeGradientText("무승부!", dBoyColor, ntfColor)}</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                }
+                else if (_pointAOccupyTime + _pointBOccupyTime == 0)
+                {
+                    _roundEnded = true;
+                    Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                    Map.Broadcast(5, $"<size=35><b>{MakeGradientText("무승부!", dBoyColor, ntfColor)}</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                }
+                else if (_pointAOccupyTime + _pointBOccupyTime > 0)
+                {
+                    _roundEnded = true;
+                    Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                    Map.Broadcast(5, $"<size=35><b>{MakeGradientText("Class-D", new Color32(239,121,4, 255), new Color32(85,38,0,255))} 팀이 승리했습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                }
+                else if (_pointAOccupyTime + _pointBOccupyTime < 0)
+                {
+                    _roundEnded = true;
+                    Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                    Map.Broadcast(5, $"<size=35><b>{MakeGradientText("Nine-Tailed-Fox", new Color32(7,143,243,255), new Color32(0,46,85,255))} 팀이 승리했습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                }
+            }
+        }
     }
 
     private IEnumerator<float> PointTimer()
     {
-        while (!Round.IsEnded)
+        while (!Round.IsEnded && !_roundEnded)
         {
             foreach (var player in Player.List)
             {
@@ -307,11 +465,6 @@ public class EventHandlers
             }
 
             // point A
-            var dBoyColor = new Color32(239,121,4, 25);
-
-            var defaultColor = new Color32(132, 191, 133, 25);
-
-            var ntfColor = new Color32(7,143,243,25);
             if (-PointTakeOver.Instance.Config.OccupyTime < _pointAOccupyTime && _pointAOccupyTime < PointTakeOver.Instance.Config.OccupyTime)
             {
                 if (_pointAPlayers["A"].Count > 0)
@@ -346,7 +499,15 @@ public class EventHandlers
 
                         if (_pointAOccupyTime >= PointTakeOver.Instance.Config.OccupyTime)
                         {
+                            _broadcastInfo = false;
                             Map.Broadcast(5, $"<size=35><b>포인트 A가 {MakeGradientText("Class-D", new Color32(239,121,4, 255), new Color32(85,38,0,255))} 팀에 의해 점령되었습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            Timing.CallDelayed(5f, () => _broadcastInfo = true);
+                            if (_pointBOccupyTime >= PointTakeOver.Instance.Config.OccupyTime)
+                            {
+                                Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                                _roundEnded = true;
+                                Map.Broadcast(5, $"<size=35><b>{MakeGradientText("Class-D", new Color32(239,121,4, 255), new Color32(85,38,0,255))} 팀이 승리했습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            }
                         }
                     }
                     else
@@ -399,7 +560,15 @@ public class EventHandlers
 
                         if (_pointAOccupyTime <= -PointTakeOver.Instance.Config.OccupyTime)
                         {
+                            _broadcastInfo = false;
                             Map.Broadcast(5, $"<size=35><b>포인트 A가 {MakeGradientText("Nine-Tailed-Fox", new Color32(7,143,243,255), new Color32(0,46,85,255))} 팀에 의해 점령되었습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            Timing.CallDelayed(5f, () => _broadcastInfo = true);
+                            if (_pointBOccupyTime <= -PointTakeOver.Instance.Config.OccupyTime)
+                            {
+                                Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                                _roundEnded = true;
+                                Map.Broadcast(5, $"<size=35><b>{MakeGradientText("Nine-Tailed-Fox", new Color32(7,143,243,255), new Color32(0,46,85,255))} 팀이 승리했습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            }
                         }
                     }
                     else
@@ -457,9 +626,11 @@ public class EventHandlers
                             {
                                 _pointAStealTime = 0;
                                 _pointAOccupyTime = 0;
+                                _broadcastInfo = false;
                                 Map.Broadcast(5,
                                     $"<size=35><b>포인트 A가 {MakeGradientText("Class-D", new Color32(239, 121, 4, 255), new Color32(85, 38, 0, 255))} 팀에 의해 쟁탈되었습니다!</b></size>",
                                     Broadcast.BroadcastFlags.Normal, true);
+                                Timing.CallDelayed(5f, () => _broadcastInfo = true);
                             }
                         }
                         else
@@ -514,9 +685,11 @@ public class EventHandlers
                             {
                                 _pointAStealTime = 0;
                                 _pointAOccupyTime = 0;
+                                _broadcastInfo = false;
                                 Map.Broadcast(5,
                                     $"<size=35><b>포인트 A가 {MakeGradientText("Nine-Tailed-Fox", new Color32(7, 143, 243, 255), new Color32(0, 46, 85, 255))} 팀에 의해 쟁탈되었습니다!</b></size>",
                                     Broadcast.BroadcastFlags.Normal, true);
+                                Timing.CallDelayed(5f, () => _broadcastInfo = true);
                             }
                         }
                         else
@@ -577,7 +750,15 @@ public class EventHandlers
 
                         if (_pointBOccupyTime >= PointTakeOver.Instance.Config.OccupyTime)
                         {
+                            _broadcastInfo = false;
                             Map.Broadcast(5, $"<size=35><b>포인트 B가 {MakeGradientText("Class-D", new Color32(239,121,4, 255), new Color32(85,38,0,255))} 팀에 의해 점령되었습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            Timing.CallDelayed(5f, () => _broadcastInfo = true);
+                            if (_pointAOccupyTime >= PointTakeOver.Instance.Config.OccupyTime)
+                            {
+                                Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                                _roundEnded = true;
+                                Map.Broadcast(5, $"<size=35><b>{MakeGradientText("Class-D", new Color32(239,121,4, 255), new Color32(85,38,0,255))} 팀이 승리했습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            }
                         }
                     }
                     else
@@ -629,7 +810,15 @@ public class EventHandlers
 
                         if (_pointBOccupyTime <= -PointTakeOver.Instance.Config.OccupyTime)
                         {
+                            _broadcastInfo = false;
                             Map.Broadcast(5, $"<size=35><b>포인트 B가 {MakeGradientText("Nine-Tailed-Fox", new Color32(7,143,243,255), new Color32(0,46,85,255))} 팀에 의해 점령되었습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            Timing.CallDelayed(5f, () => _broadcastInfo = true);
+                            if (_pointAOccupyTime <= -PointTakeOver.Instance.Config.OccupyTime)
+                            {
+                                Player.List.ToList().ForEach(x => x.Role.Set(RoleTypeId.Spectator));
+                                _roundEnded = true;
+                                Map.Broadcast(5, $"<size=35><b>{MakeGradientText("Nine-Tailed-Fox", new Color32(7,143,243,255), new Color32(0,46,85,255))} 팀이 승리했습니다!</b></size>", Broadcast.BroadcastFlags.Normal, true);
+                            }
                         }
                     }
                     else
@@ -687,9 +876,11 @@ public class EventHandlers
                             {
                                 _pointBStealTime = 0;
                                 _pointBOccupyTime = 0;
+                                _broadcastInfo = false;
                                 Map.Broadcast(5,
                                     $"<size=35><b>포인트 B가 {MakeGradientText("Class-D", new Color32(239, 121, 4, 255), new Color32(85, 38, 0, 255))} 팀에 의해 쟁탈되었습니다!</b></size>",
                                     Broadcast.BroadcastFlags.Normal, true);
+                                Timing.CallDelayed(5f, () => _broadcastInfo = true);
                             }
                         }
                         else
@@ -743,9 +934,11 @@ public class EventHandlers
                             {
                                 _pointBStealTime = 0;
                                 _pointBOccupyTime = 0;
+                                _broadcastInfo = false;
                                 Map.Broadcast(5,
                                     $"<size=35><b>포인트 B가 {MakeGradientText("Nine-Tailed-Fox", new Color32(7, 143, 243, 255), new Color32(0, 46, 85, 255))} 팀에 의해 쟁탈되었습니다!</b></size>",
                                     Broadcast.BroadcastFlags.Normal, true);
+                                Timing.CallDelayed(5f, () => _broadcastInfo = true);
                             }
                         }
                         else
@@ -822,6 +1015,8 @@ public class EventHandlers
         player.AddItem(ItemType.Medkit);
         player.AddItem(ItemType.Adrenaline);
         player.AddItem(ItemType.ArmorCombat);
+        player.AddItem(ItemType.Radio);
+        player.AddAmmo(AmmoType.Nato556, 5000);
 
         player.IsGodModeEnabled = true;
         yield return Timing.WaitForSeconds(2f);
@@ -844,5 +1039,10 @@ public class EventHandlers
     {
         _pointAPlayers.Clear();
         _pointBPlayers.Clear();
+    }
+
+    public void OnUsingRadioBattery(UsingRadioBatteryEventArgs ev)
+    {
+        ev.Drain = 0;
     }
 }

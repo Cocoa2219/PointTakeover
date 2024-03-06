@@ -42,6 +42,7 @@ namespace PointTakeOver
             Player.Dying += EventHandlers.OnDying;
             Player.Died += EventHandlers.OnDied;
             Player.InteractingElevator += EventHandlers.OnInteractingElevator;
+            Player.UsingRadioBattery += EventHandlers.OnUsingRadioBattery;
         }
 
         private void UnregisterEvents()
@@ -53,6 +54,7 @@ namespace PointTakeOver
             Player.Dying -= EventHandlers.OnDying;
             Player.Died -= EventHandlers.OnDied;
             Player.InteractingElevator -= EventHandlers.OnInteractingElevator;
+            Player.UsingRadioBattery -= EventHandlers.OnUsingRadioBattery;
         }
     }
 }

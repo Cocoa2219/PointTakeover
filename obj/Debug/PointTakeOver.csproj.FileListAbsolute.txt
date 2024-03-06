@@ -273,3 +273,6 @@ C:\Users\PC\Documents\PointTakeover\obj\Debug\PointTakeOver.csproj.CoreCompileIn
 C:\Users\PC\Documents\PointTakeover\obj\Debug\PointTak.B6F93247.Up2Date
 C:\Users\PC\Documents\PointTakeover\obj\Debug\PointTakeOver.dll
 C:\Users\PC\Documents\PointTakeover\obj\Debug\PointTakeOver.pdb
+C:\Users\user\Documents\PointTakeOver\bin\Debug\PointTakeOver.dll.config
+C:\Users\user\Documents\PointTakeOver\bin\Debug\0Harmony.dll
+C:\Users\user\Documents\PointTakeOver\bin\Debug\0Harmony.xml
